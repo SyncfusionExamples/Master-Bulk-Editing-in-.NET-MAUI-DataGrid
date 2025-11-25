@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DataGridBulkEditSample/DataGridBulkEditSample.csproj">
+    <Deploy />
+  </Project>
+</Solution>
