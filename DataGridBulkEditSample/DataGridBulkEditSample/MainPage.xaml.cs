@@ -1,4 +1,5 @@
-﻿using Syncfusion.Maui.DataGrid;
+﻿// DataGridBulkEditSample/MainPage.xaml.cs
+using Syncfusion.Maui.DataGrid;
 using System.Globalization;
 
 namespace DataGridBulkEditSample
@@ -15,9 +16,11 @@ namespace DataGridBulkEditSample
             bulkEditPopup.BindingContext = vm;
 
 #if WINDOWS || MACCATALYST
+            // Desktop: right-tap opens the bulk edit popup
             dataGrid.CellRightTapped += (s, e) => OpenBulkEditPopupWithSelection(e.Column.MappingName);
 #else
-            dataGrid.CellTapped += (s, e) => OpenBulkEditPopupWithSelection(e.Column.MappingName);
+            // Mobile (Android/iOS): long press opens the bulk edit popup
+            dataGrid.CellLongPress += (s, e) => OpenBulkEditPopupWithSelection(e.Column.MappingName);
 #endif
         }
 
@@ -59,31 +62,32 @@ namespace DataGridBulkEditSample
                 }
             }
 
-
             // Fallback for versions exposing SelectedItems
-            var items = dataGrid.SelectedRows;
-            if (items != null && result.Count == 0)
+            if (result.Count == 0)
             {
-                foreach (var item in items)
+                var items = dataGrid.SelectedRows;
+                if (items != null)
                 {
-                    if (item is OrderInfo o3)
-                        result.Add(o3);
-                    else if (item is DataGridRowInfo rowInfo && rowInfo.RowData is OrderInfo o4)
-                        result.Add(o4);
+                    foreach (var item in items)
+                    {
+                        if (item is OrderInfo o3)
+                            result.Add(o3);
+                        else if (item is DataGridRowInfo rowInfo && rowInfo.RowData is OrderInfo o4)
+                            result.Add(o4);
+                    }
                 }
             }
 
             return result;
         }
     }
+
     public class BoolInverseConverter : IValueConverter
     {
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-    => value is bool b ? !b : value;
-
+            => value is bool b ? !b : value;
 
         public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
             => value is bool b ? !b : value;
-
     }
 }
