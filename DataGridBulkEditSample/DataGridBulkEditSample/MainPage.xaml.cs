@@ -1,5 +1,4 @@
-﻿// DataGridBulkEditSample/MainPage.xaml.cs
-using Syncfusion.Maui.DataGrid;
+﻿using Syncfusion.Maui.DataGrid;
 using System.Globalization;
 
 namespace DataGridBulkEditSample
@@ -8,22 +7,33 @@ namespace DataGridBulkEditSample
     {
         private MainViewModel vm;
 
+        /// <summary>
+        /// Initializes the page, sets up bindings, and attaches gesture handlers
+        /// based on the current platform.
+        /// </summary>
         public MainPage()
         {
             InitializeComponent();
+
+            // Bind page & popup to the same ViewModel to share selection and edit context
             vm = new MainViewModel();
             BindingContext = vm;
             bulkEditPopup.BindingContext = vm;
 
 #if WINDOWS || MACCATALYST
-            // Desktop: right-tap opens the bulk edit popup
+            // Desktop: right-tap opens the bulk edit popup for the tapped column
             dataGrid.CellRightTapped += (s, e) => OpenBulkEditPopupWithSelection(e.Column.MappingName);
 #else
-            // Mobile (Android/iOS): long press opens the bulk edit popup
+            // Mobile (Android/iOS): long press opens the bulk edit popup for the pressed column
             dataGrid.CellLongPress += (s, e) => OpenBulkEditPopupWithSelection(e.Column.MappingName);
 #endif
         }
 
+        /// <summary>
+        /// Commits any active in-cell edit, captures current selection,
+        /// sets target column mapping, and opens the bulk edit popup.
+        /// </summary>
+        /// <param name="mappingName">The data column mapping name (e.g., property name) that was tapped/pressed.</param>
         private void OpenBulkEditPopupWithSelection(string mappingName)
         {
             CommitCurrentEditIfAny();
@@ -32,6 +42,10 @@ namespace DataGridBulkEditSample
             vm.IsBulkPopupOpen = true;
         }
 
+        /// <summary>
+        /// Attempts to finalize any current grid cell edit so the underlying model
+        /// reflects changes before bulk edits are applied.
+        /// </summary>
         private void CommitCurrentEditIfAny()
         {
             try
@@ -40,11 +54,15 @@ namespace DataGridBulkEditSample
             }
             catch
             {
-                // As a fallback, try moving focus to commit editor implicitly
                 dataGrid.Focus();
             }
         }
 
+        /// <summary>
+        /// Returns a strongly-typed list of selected <see cref="OrderInfo"/> models.
+        /// Handles differences in Syncfusion DataGrid versions where selection may expose
+        /// model instances directly or via <c>DataGridRowInfo</c>.
+        /// </summary>
         private IList<OrderInfo> GetSelectedOrderInfos()
         {
             var result = new List<OrderInfo>();
@@ -62,7 +80,6 @@ namespace DataGridBulkEditSample
                 }
             }
 
-            // Fallback for versions exposing SelectedItems
             if (result.Count == 0)
             {
                 var items = dataGrid.SelectedRows;
@@ -82,6 +99,10 @@ namespace DataGridBulkEditSample
         }
     }
 
+    /// <summary>
+    /// Inverts boolean values for XAML bindings.
+    /// Useful for toggling visibility or enabled states (e.g., show label when condition is false).
+    /// </summary>
     public class BoolInverseConverter : IValueConverter
     {
         public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

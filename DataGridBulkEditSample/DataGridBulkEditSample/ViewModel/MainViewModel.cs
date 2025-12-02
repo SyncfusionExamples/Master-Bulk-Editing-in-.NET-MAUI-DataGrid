@@ -3,73 +3,131 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Windows.Input;
 
-namespace DataGridBulkEditSample;
-
-public class MainViewModel : INotifyPropertyChanged
+namespace DataGridBulkEditSample
 {
-    public ObservableCollection<OrderInfo> Orders { get; set; }
-
-    // Selected rows captured before opening popup
-    private IList<OrderInfo> selectedRows = new List<OrderInfo>();
-    public IList<OrderInfo> SelectedRows
+    public class MainViewModel : INotifyPropertyChanged
     {
-        get => selectedRows;
-        set { selectedRows = value ?? new List<OrderInfo>(); OnPropertyChanged(nameof(SelectedRows)); }
-    }
+        /// <summary>
+        /// Collection of orders displayed in the DataGrid.
+        /// </summary>
+        public ObservableCollection<OrderInfo> Orders { get; set; }
 
-    public ICommand ApplyBulkEditCommand { get; }
-    public ICommand CancelBulkEditCommand { get; }
+        private IList<OrderInfo> selectedRows = new List<OrderInfo>();
 
-    // For text-based edit (e.g., CustomerName, Country)
-    private string? bulkEditValue;
-    public string? BulkEditValue
-    {
-        get => bulkEditValue;
-        set { bulkEditValue = value; OnPropertyChanged(nameof(BulkEditValue)); }
-    }
-
-    // Popup state
-    private bool isBulkPopupOpen;
-    public bool IsBulkPopupOpen
-    {
-        get => isBulkPopupOpen;
-        set { isBulkPopupOpen = value; OnPropertyChanged(nameof(IsBulkPopupOpen)); }
-    }
-
-    // Which column are we editing?
-    private string targetMappingName = "CustomerName";
-    public string TargetMappingName
-    {
-        get => targetMappingName;
-        set
+        /// <summary>
+        /// List of rows selected in the DataGrid before opening the bulk edit popup.
+        /// </summary>
+        public IList<OrderInfo> SelectedRows
         {
-            targetMappingName = value;
-            OnPropertyChanged(nameof(TargetMappingName));
-            IsStatusEditing = string.Equals(targetMappingName, "Status");
+            get => selectedRows;
+            set
+            {
+                selectedRows = value ?? new List<OrderInfo>();
+                OnPropertyChanged(nameof(SelectedRows));
+            }
         }
-    }
 
-    // Toggle UI between Entry vs Picker
-    private bool isStatusEditing;
-    public bool IsStatusEditing
-    {
-        get => isStatusEditing;
-        set { isStatusEditing = value; OnPropertyChanged(nameof(IsStatusEditing)); }
-    }
+        /// <summary>
+        /// Command to apply bulk edits to selected rows.
+        /// </summary>
+        public ICommand ApplyBulkEditCommand { get; }
 
-    // Picker data for Status
-    public IList<string> StatusOptions { get; } = new List<string> { "Probation", "Confirmed" };
+        /// <summary>
+        /// Command to cancel bulk edit and close the popup.
+        /// </summary>
+        public ICommand CancelBulkEditCommand { get; }
 
-    private string? selectedStatus;
-    public string? SelectedStatus
-    {
-        get => selectedStatus;
-        set { selectedStatus = value; OnPropertyChanged(nameof(SelectedStatus)); }
-    }
+        private string? bulkEditValue;
 
-    public MainViewModel()
-    {
-        Orders = new ObservableCollection<OrderInfo>
+        /// <summary>
+        /// Value entered by the user for bulk editing text-based columns (e.g., CustomerName, Country).
+        /// </summary>
+        public string? BulkEditValue
+        {
+            get => bulkEditValue;
+            set
+            {
+                bulkEditValue = value;
+                OnPropertyChanged(nameof(BulkEditValue));
+            }
+        }
+
+        private bool isBulkPopupOpen;
+
+        /// <summary>
+        /// Indicates whether the bulk edit popup is currently open.
+        /// </summary>
+        public bool IsBulkPopupOpen
+        {
+            get => isBulkPopupOpen;
+            set
+            {
+                isBulkPopupOpen = value;
+                OnPropertyChanged(nameof(IsBulkPopupOpen));
+            }
+        }
+
+        private string targetMappingName = "CustomerName";
+
+        /// <summary>
+        /// The column name (MappingName) being edited in bulk.
+        /// Used to determine which property of OrderInfo to update.
+        /// </summary>
+        public string TargetMappingName
+        {
+            get => targetMappingName;
+            set
+            {
+                targetMappingName = value;
+                OnPropertyChanged(nameof(TargetMappingName));
+
+                // Toggle UI between Entry and Picker based on column type
+                IsStatusEditing = string.Equals(targetMappingName, "Status");
+            }
+        }
+
+        private bool isStatusEditing;
+
+        /// <summary>
+        /// Indicates whether the current bulk edit is for the Status column.
+        /// If true, UI shows a Picker instead of a text Entry.
+        /// </summary>
+        public bool IsStatusEditing
+        {
+            get => isStatusEditing;
+            set
+            {
+                isStatusEditing = value;
+                OnPropertyChanged(nameof(IsStatusEditing));
+            }
+        }
+
+        /// <summary>
+        /// Available status options for bulk editing (used in Picker).
+        /// </summary>
+        public IList<string> StatusOptions { get; } = new List<string> { "Probation", "Confirmed" };
+
+        private string? selectedStatus;
+
+        /// <summary>
+        /// Selected status value from the Picker for bulk editing.
+        /// </summary>
+        public string? SelectedStatus
+        {
+            get => selectedStatus;
+            set
+            {
+                selectedStatus = value;
+                OnPropertyChanged(nameof(SelectedStatus));
+            }
+        }
+
+        /// <summary>
+        /// Initializes the ViewModel with sample data and sets up commands.
+        /// </summary>
+        public MainViewModel()
+        {
+            Orders = new ObservableCollection<OrderInfo>
             {
                 new OrderInfo { EmployeeID = 101, CustomerName = "John", Country = "USA", Date = DateTime.Now, Status = "Probation", Branch="Chennai" },
                 new OrderInfo { EmployeeID = 102, CustomerName = "Mary", Country = "UK", Date = DateTime.Now,  Status = "Confirmed", Branch="Kenya"  },
@@ -88,83 +146,98 @@ public class MainViewModel : INotifyPropertyChanged
                 new OrderInfo { EmployeeID = 115, CustomerName = "Fizzy", Country = "India",Date = DateTime.Now, Status = "Probation", Branch = "Chennai"}
             };
 
-        ApplyBulkEditCommand = new Command(ApplyBulkEdit);
-        CancelBulkEditCommand = new Command(CancelBulkEdit);
-    }
-
-    private void ApplyBulkEdit()
-    {
-        if (SelectedRows == null || SelectedRows.Count == 0)
-        {
-            ClosePopup();
-            return;
+            ApplyBulkEditCommand = new Command(ApplyBulkEdit);
+            CancelBulkEditCommand = new Command(CancelBulkEdit);
         }
-        if (IsStatusEditing)
+
+        /// <summary>
+        /// Applies the bulk edit to all selected rows based on the target column.
+        /// Handles both text-based edits and status updates.
+        /// </summary>
+        private void ApplyBulkEdit()
         {
-            if (string.IsNullOrWhiteSpace(SelectedStatus))
+            if (SelectedRows == null || SelectedRows.Count == 0)
             {
                 ClosePopup();
                 return;
             }
 
-            foreach (var order in SelectedRows)
-                order.Status = SelectedStatus;
-        }
-        else
-        {
-            if (string.IsNullOrWhiteSpace(BulkEditValue))
+            if (IsStatusEditing)
             {
-                ClosePopup();
-                return;
-            }
-
-            // Use the target column
-            foreach (var order in SelectedRows)
-            {
-                switch (TargetMappingName)
+                if (string.IsNullOrWhiteSpace(SelectedStatus))
                 {
-                    case "CustomerName":
-                        order.CustomerName = BulkEditValue;
-                        break;
-                    case "Country":
-                        order.Country = BulkEditValue;
-                        break;
-                    default:
-                        // Generic fallback via reflection
-                        var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
-                        if (prop != null && prop.CanWrite)
-                        {
-                            object value = BulkEditValue;
+                    ClosePopup();
+                    return;
+                }
 
-                            if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
-                                value = i;
-                            else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
-                                value = d;
-                            else if (prop.PropertyType == typeof(DateTime) &&
-                                     DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
-                                value = dt;
+                foreach (var order in SelectedRows)
+                    order.Status = SelectedStatus;
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(BulkEditValue))
+                {
+                    ClosePopup();
+                    return;
+                }
 
-                            prop.SetValue(order, value);
-                        }
-                        break;
+                foreach (var order in SelectedRows)
+                {
+                    switch (TargetMappingName)
+                    {
+                        case "CustomerName":
+                            order.CustomerName = BulkEditValue;
+                            break;
+                        case "Country":
+                            order.Country = BulkEditValue;
+                            break;
+                        default:
+                            // Generic fallback using reflection for dynamic property updates
+                            var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
+                            if (prop != null && prop.CanWrite)
+                            {
+                                object value = BulkEditValue;
+
+                                if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
+                                    value = i;
+                                else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
+                                    value = d;
+                                else if (prop.PropertyType == typeof(DateTime) &&
+                                         DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
+                                    value = dt;
+
+                                prop.SetValue(order, value);
+                            }
+                            break;
+                    }
                 }
             }
+
+            ClosePopup();
         }
 
-        ClosePopup();
+        /// <summary>
+        /// Cancels the bulk edit operation and closes the popup.
+        /// </summary>
+        private void CancelBulkEdit() => ClosePopup();
+
+        /// <summary>
+        /// Resets popup state and clears temporary values after bulk edit.
+        /// </summary>
+        private void ClosePopup()
+        {
+            IsBulkPopupOpen = false;
+            BulkEditValue = string.Empty;
+            SelectedStatus = null;
+            SelectedRows = new List<OrderInfo>();
+        }
+
+        public event PropertyChangedEventHandler? PropertyChanged;
+
+        /// <summary>
+        /// Raises the PropertyChanged event for data binding updates.
+        /// </summary>
+        protected void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
-
-    private void CancelBulkEdit() => ClosePopup();
-
-    private void ClosePopup()
-    {
-        IsBulkPopupOpen = false;
-        BulkEditValue = string.Empty;
-        SelectedStatus = null;
-        SelectedRows = new List<OrderInfo>();
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    protected void OnPropertyChanged(string propertyName) =>
-        PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
 }
