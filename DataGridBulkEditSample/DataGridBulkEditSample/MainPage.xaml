@@ -10,16 +10,18 @@
             <Setter Property="FontAttributes" Value="Bold"/>
         </Style>
     </ContentPage.Resources>
+    
     <Grid>
         <syncfusion:SfDataGrid x:Name="dataGrid"
-                           AllowEditing="True"
+                               AllowEditing="True"
                                VerticalScrollBarVisibility="Never"
-                           
-                           SelectionMode="Multiple"
-                           ItemsSource="{Binding Orders}">
+                               FrozenColumnCount="1"
+                               SelectionMode="Multiple"
+                               ColumnWidthMode="Auto"
+                               ItemsSource="{Binding Orders}">
 
             <syncfusion:SfDataGrid.Columns>
-                <syncfusion:DataGridNumericColumn MappingName="EmployeeID" HeaderText="ID" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+                <syncfusion:DataGridNumericColumn MappingName="EmployeeID" HeaderText="ID" CellTextAlignment="Center" HeaderTextAlignment="Center" Format="N0"/>
                 <syncfusion:DataGridTextColumn MappingName="CustomerName" HeaderText="Name" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
                 <syncfusion:DataGridDateColumn MappingName="Date" HeaderText="Date" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
                 <syncfusion:DataGridTextColumn MappingName="Country" HeaderText="Country" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
@@ -27,57 +29,49 @@
                 <syncfusion:DataGridTextColumn MappingName="Branch" HeaderText="Branch" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
             </syncfusion:SfDataGrid.Columns>
         </syncfusion:SfDataGrid>
-   
-    <popup:SfPopup x:Name="bulkEditPopup"
-               WidthRequest="400"
-               HeightRequest="300"
-               ShowHeader="True"
-               ShowFooter="True"
-               HeaderTitle="{Binding TargetMappingName}"
-               AppearanceMode="TwoButton"
-               AcceptButtonText="Apply"
-               DeclineButtonText="Cancel"
-               IsOpen="{Binding IsBulkPopupOpen, Mode=TwoWay}"
-               AcceptCommand="{Binding ApplyBulkEditCommand}"
-               DeclineCommand="{Binding CancelBulkEditCommand}">
+
+        <popup:SfPopup  x:Name="bulkEditPopup"
+                            WidthRequest="400"
+                            HeightRequest="300"
+                            ShowHeader="True"
+                            ShowFooter="True"
+                            HeaderTitle="{Binding TargetMappingName}"
+                            AppearanceMode="TwoButton"
+                            AcceptButtonText="Apply"
+                            DeclineButtonText="Cancel"
+                            IsOpen="{Binding IsBulkPopupOpen, Mode=TwoWay}"
+                            AcceptCommand="{Binding ApplyBulkEditCommand}"
+                            DeclineCommand="{Binding CancelBulkEditCommand}">
 
             <popup:SfPopup.ContentTemplate>
                 <DataTemplate>
-                    <VerticalStackLayout Padding="16,16,16,32" Spacing="16"
-                                 >
-
-                        <VerticalStackLayout IsVisible="False"
-                                     >
+                    <VerticalStackLayout Padding="16,16,16,32" Spacing="16">
+                        <VerticalStackLayout IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                     Binding="{Binding IsStatusEditing}"
-                                     Value="True">
+                                                 Binding="{Binding IsStatusEditing}"
+                                                 Value="True">
                                     <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
-
                             <Label Text="Select Status" TextColor="Black" />
                             <Picker ItemsSource="{Binding StatusOptions}"
-                            SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"
-                             />
+                                        SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
                         </VerticalStackLayout>
 
-                        <VerticalStackLayout IsVisible="False"
-                                     >
+                        <VerticalStackLayout IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                     Binding="{Binding IsStatusEditing}"
-                                     Value="False">
+                                                 Binding="{Binding IsStatusEditing}"
+                                                 Value="False">
                                     <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
-
                             <Label Text="New Value" TextColor="Black" />
                             <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
-                           Placeholder="Enter value"
-                           VerticalOptions="Start" />
+                                       Placeholder="Enter value"
+                                       VerticalOptions="Start" />
                         </VerticalStackLayout>
-
                     </VerticalStackLayout>
                 </DataTemplate>
             </popup:SfPopup.ContentTemplate>

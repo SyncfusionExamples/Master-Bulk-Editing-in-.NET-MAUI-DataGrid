@@ -87,7 +87,7 @@ Bulk editing enables users to apply changes to multiple cells in a column simult
 
 ***
 
-![Bulk Editing](BulkEdit_Windows.gif)
+![Bulk Editing]("DataGridBulkEditSample\BulkEditing_Windows.gif")
 
 ## **Conclusion**
 

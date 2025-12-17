@@ -183,32 +183,35 @@ namespace DataGridBulkEditSample
 
                 foreach (var order in SelectedRows)
                 {
-                    switch (TargetMappingName)
+                    if (TargetMappingName == "CustomerName")
                     {
-                        case "CustomerName":
-                            order.CustomerName = BulkEditValue;
-                            break;
-                        case "Country":
-                            order.Country = BulkEditValue;
-                            break;
-                        default:
-                            // Generic fallback using reflection for dynamic property updates
-                            var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
-                            if (prop != null && prop.CanWrite)
-                            {
-                                object value = BulkEditValue;
+                        order.CustomerName = BulkEditValue;
+                    }
 
-                                if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
-                                    value = i;
-                                else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
-                                    value = d;
-                                else if (prop.PropertyType == typeof(DateTime) &&
-                                         DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
-                                    value = dt;
+                    else if (TargetMappingName == "Country")
+                    {
+                        order.Country = BulkEditValue;
+                    }
 
-                                prop.SetValue(order, value);
-                            }
-                            break;
+                    else
+                    {
+                        var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
+                        if (prop != null && prop.CanWrite)
+                        {
+                            object value = BulkEditValue;
+                            if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
+                                value = i;
+
+                            else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
+                                value = d;
+
+                            else if (prop.PropertyType == typeof(DateTime) &&
+                            DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
+                                value = value = dt;
+                            prop.SetValue(order, value);
+
+                        }
+                        break;
                     }
                 }
             }

@@ -5,7 +5,7 @@ namespace DataGridBulkEditSample
 {
     public partial class MainPage : ContentPage
     {
-        private MainViewModel vm;
+        private MainViewModel viewModel;
 
         /// <summary>
         /// Initializes the page, sets up bindings, and attaches gesture handlers
@@ -16,9 +16,9 @@ namespace DataGridBulkEditSample
             InitializeComponent();
 
             // Bind page & popup to the same ViewModel to share selection and edit context
-            vm = new MainViewModel();
-            BindingContext = vm;
-            bulkEditPopup.BindingContext = vm;
+            viewModel = new MainViewModel();
+            BindingContext = viewModel;
+            bulkEditPopup.BindingContext = viewModel;
 
 #if WINDOWS || MACCATALYST
             // Desktop: right-tap opens the bulk edit popup for the tapped column
@@ -37,9 +37,9 @@ namespace DataGridBulkEditSample
         private void OpenBulkEditPopupWithSelection(string mappingName)
         {
             CommitCurrentEditIfAny();
-            vm.SelectedRows = GetSelectedOrderInfos();
-            vm.TargetMappingName = mappingName;
-            vm.IsBulkPopupOpen = true;
+            viewModel.SelectedRows = GetSelectedOrderInfos();
+            viewModel.TargetMappingName = mappingName;
+            viewModel.IsBulkPopupOpen = true;
         }
 
         /// <summary>
@@ -66,8 +66,6 @@ namespace DataGridBulkEditSample
         private IList<OrderInfo> GetSelectedOrderInfos()
         {
             var result = new List<OrderInfo>();
-
-            // Prefer SelectedRows; items can be model or DataGridRowInfo depending on version
             var rows = dataGrid.SelectedRows;
             if (rows != null)
             {
@@ -97,18 +95,5 @@ namespace DataGridBulkEditSample
 
             return result;
         }
-    }
-
-    /// <summary>
-    /// Inverts boolean values for XAML bindings.
-    /// Useful for toggling visibility or enabled states (e.g., show label when condition is false).
-    /// </summary>
-    public class BoolInverseConverter : IValueConverter
-    {
-        public object? Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
-            => value is bool b ? !b : value;
-
-        public object? ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
-            => value is bool b ? !b : value;
     }
 }
