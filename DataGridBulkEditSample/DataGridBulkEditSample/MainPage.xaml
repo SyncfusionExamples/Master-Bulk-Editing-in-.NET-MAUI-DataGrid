@@ -31,17 +31,17 @@
         </syncfusion:SfDataGrid>
 
         <popup:SfPopup  x:Name="bulkEditPopup"
-                            WidthRequest="400"
-                            HeightRequest="300"
-                            ShowHeader="True"
-                            ShowFooter="True"
-                            HeaderTitle="{Binding TargetMappingName}"
-                            AppearanceMode="TwoButton"
-                            AcceptButtonText="Apply"
-                            DeclineButtonText="Cancel"
-                            IsOpen="{Binding IsBulkPopupOpen, Mode=TwoWay}"
-                            AcceptCommand="{Binding ApplyBulkEditCommand}"
-                            DeclineCommand="{Binding CancelBulkEditCommand}">
+                        WidthRequest="400"
+                        HeightRequest="300"
+                        ShowHeader="True"
+                        ShowFooter="True"
+                        HeaderTitle="{Binding TargetMappingName}"
+                        AppearanceMode="TwoButton"
+                        AcceptButtonText="Apply"
+                        DeclineButtonText="Cancel"
+                        IsOpen="{Binding IsBulkPopupOpen, Mode=TwoWay}"
+                        AcceptCommand="{Binding ApplyBulkEditCommand}"
+                        DeclineCommand="{Binding CancelBulkEditCommand}">
 
             <popup:SfPopup.ContentTemplate>
                 <DataTemplate>
@@ -49,28 +49,28 @@
                         <VerticalStackLayout IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                                 Binding="{Binding IsStatusEditing}"
-                                                 Value="True">
+                                             Binding="{Binding IsStatusEditing}"
+                                             Value="True">
                                     <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
                             <Label Text="Select Status" TextColor="Black" />
                             <Picker ItemsSource="{Binding StatusOptions}"
-                                        SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
+                                    SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
                         </VerticalStackLayout>
 
                         <VerticalStackLayout IsVisible="False">
                             <VerticalStackLayout.Triggers>
                                 <DataTrigger TargetType="VerticalStackLayout"
-                                                 Binding="{Binding IsStatusEditing}"
-                                                 Value="False">
+                                             Binding="{Binding IsStatusEditing}"
+                                             Value="False">
                                     <Setter Property="IsVisible" Value="True" />
                                 </DataTrigger>
                             </VerticalStackLayout.Triggers>
                             <Label Text="New Value" TextColor="Black" />
                             <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
-                                       Placeholder="Enter value"
-                                       VerticalOptions="Start" />
+                                   Placeholder="Enter value"
+                                   VerticalOptions="Start" />
                         </VerticalStackLayout>
                     </VerticalStackLayout>
                 </DataTemplate>
