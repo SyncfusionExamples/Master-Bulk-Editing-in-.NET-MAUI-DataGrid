@@ -5,6 +5,9 @@ using System.Windows.Input;
 
 namespace DataGridBulkEditSample
 {
+    /// <summary>
+    /// Reprsents the MainViewModel for the DataGrid bulk edit.
+    /// </summary>
     public class MainViewModel : INotifyPropertyChanged
     {
         /// <summary>
