@@ -26,10 +26,14 @@ dataGrid.CellRightTapped += (s, e) =>
 {
     var mapping = e.Column?.MappingName
                   ?? ResolveMappingNameFromEventArgs(e)
-                  ?? GetFirstSelectedMappingName();
+                  ?? GetFirstSelectedMappingName()
+                  ?? "Status";
 
-    var rows = GetSelectedOrderInfosFromSelectedCells(mapping).ToList();
-    if (rows.Count == 0) rows = GetSelectedOrderInfos().ToList();
+    var rows = GetSelectedOrderInfosFromSelectedCells(mapping);
+    if (rows.Count == 0)
+    {
+        rows = GetSelectedOrderInfos().ToList();
+    }
 
     viewModel.SelectedRows = rows;
     OpenPopupBasedOnMode(mapping);
