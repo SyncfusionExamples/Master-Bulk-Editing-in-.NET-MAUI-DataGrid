@@ -30,8 +30,60 @@ namespace DataGridBulkEditSample
             }
         }
 
+        private bool isCellSelectionMode;
+
         /// <summary>
-        /// Command to apply bulk edits to selected rows.
+        /// True = Cell selection mode; False = Row selection mode.
+        /// Bound indirectly via SelectedSelectionMode.
+        /// </summary>
+        public bool IsCellSelectionMode
+        {
+            get => isCellSelectionMode;
+            set
+            {
+                if (isCellSelectionMode != value)
+                {
+                    isCellSelectionMode = value;
+                    OnPropertyChanged(nameof(IsCellSelectionMode));
+                }
+            }
+        }
+
+        private string selectedSelectionMode = "Cell";
+
+        /// <summary>
+        /// Backing property bound to the Picker. When set, toggles IsCellSelectionMode.
+        /// </summary>
+        public string SelectedSelectionMode
+        {
+            get => selectedSelectionMode;
+            set
+            {
+                if (selectedSelectionMode != value)
+                {
+                    selectedSelectionMode = value;
+                    OnPropertyChanged(nameof(SelectedSelectionMode));
+                    IsCellSelectionMode = string.Equals(value, "Cell", StringComparison.OrdinalIgnoreCase);
+                }
+            }
+        }
+
+        /// <summary>
+        /// A temporary editable copy used in Row selection mode to edit entire row fields.
+        /// </summary>
+        private OrderInfo? editableOrder;
+        public OrderInfo? EditableOrder
+        {
+            get => editableOrder;
+            set
+            {
+                editableOrder = value;
+                OnPropertyChanged(nameof(EditableOrder));
+            }
+        }
+
+        /// <summary>
+        /// Command to apply edits.
         /// </summary>
         public ICommand ApplyBulkEditCommand { get; }
 
@@ -44,6 +96,7 @@ namespace DataGridBulkEditSample
 
         /// <summary>
         /// Value entered by the user for bulk editing text-based columns (e.g., CustomerName, Country).
+        /// Used in Cell selection mode.
         /// </summary>
         public string? BulkEditValue
         {
@@ -73,8 +126,7 @@ namespace DataGridBulkEditSample
         private string targetMappingName = "CustomerName";
 
         /// <summary>
-        /// The column name (MappingName) being edited in bulk.
-        /// Used to determine which property of OrderInfo to update.
+        /// The column name (MappingName) being edited in bulk (Cell selection mode).
         /// </summary>
         public string TargetMappingName
         {
@@ -83,8 +135,6 @@ namespace DataGridBulkEditSample
             {
                 targetMappingName = value;
                 OnPropertyChanged(nameof(TargetMappingName));
-
-                // Toggle UI between Entry and Picker based on column type
                 IsStatusEditing = string.Equals(targetMappingName, "Status");
             }
         }
@@ -92,7 +142,7 @@ namespace DataGridBulkEditSample
         private bool isStatusEditing;
 
         /// <summary>
-        /// Indicates whether the current bulk edit is for the Status column.
+        /// Indicates whether the current bulk edit is for the Status column (Cell selection mode).
         /// If true, UI shows a Picker instead of a text Entry.
         /// </summary>
         public bool IsStatusEditing
@@ -113,7 +163,7 @@ namespace DataGridBulkEditSample
         private string? selectedStatus;
 
         /// <summary>
-        /// Selected status value from the Picker for bulk editing.
+        /// Selected status value from the Picker for bulk editing (Cell selection mode).
         /// </summary>
         public string? SelectedStatus
         {
@@ -149,13 +199,17 @@ namespace DataGridBulkEditSample
                 new OrderInfo { EmployeeID = 115, CustomerName = "Fizzy", Country = "India",Date = DateTime.Now, Status = "Probation", Branch = "Chennai"}
             };
 
+            // default to Cell selection mode
+            IsCellSelectionMode = true;
+
             ApplyBulkEditCommand = new Command(ApplyBulkEdit);
             CancelBulkEditCommand = new Command(CancelBulkEdit);
         }
 
         /// <summary>
-        /// Applies the bulk edit to all selected rows based on the target column.
-        /// Handles both text-based edits and status updates.
+        /// Applies the edit based on selection mode.
+        /// Cell mode edits a single column across selected cells' rows.
+        /// Row mode edits all fields using EditableOrder across selected rows.
         /// </summary>
         private void ApplyBulkEdit()
         {
@@ -165,20 +219,65 @@ namespace DataGridBulkEditSample
                 return;
             }
 
-            if (IsStatusEditing)
+            if (IsCellSelectionMode)
             {
-                if (string.IsNullOrWhiteSpace(SelectedStatus))
+                // Cell selection mode: apply a single-field change
+                if (IsStatusEditing)
                 {
-                    ClosePopup();
-                    return;
+                    if (string.IsNullOrWhiteSpace(SelectedStatus))
+                    {
+                        ClosePopup();
+                        return;
+                    }
+                    foreach (var order in SelectedRows)
+                        order.Status = SelectedStatus;
                 }
+                else
+                {
+                    if (string.IsNullOrWhiteSpace(BulkEditValue))
+                    {
+                        ClosePopup();
+                        return;
+                    }
 
-                foreach (var order in SelectedRows)
-                    order.Status = SelectedStatus;
+                    foreach (var order in SelectedRows)
+                    {
+                        if (TargetMappingName == "CustomerName")
+                        {
+                            order.CustomerName = BulkEditValue;
+                        }
+                        else if (TargetMappingName == "Country")
+                        {
+                            order.Country = BulkEditValue;
+                        }
+                        else if (TargetMappingName == "Branch")
+                        {
+                            order.Branch = BulkEditValue;
+                        }
+                        else
+                        {
+                            var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
+                            if (prop != null && prop.CanWrite)
+                            {
+                                object? value = BulkEditValue;
+                                if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
+                                    value = i;
+                                else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
+                                    value = d;
+                                else if (prop.PropertyType == typeof(DateTime) &&
+                                         DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
+                                    value = dt;
+
+                                prop.SetValue(order, value);
+                            }
+                        }
+                    }
+                }
             }
             else
             {
-                if (string.IsNullOrWhiteSpace(BulkEditValue))
+                // Row selection mode: apply all fields using the editable copy
+                if (EditableOrder == null)
                 {
                     ClosePopup();
                     return;
@@ -186,36 +285,12 @@ namespace DataGridBulkEditSample
 
                 foreach (var order in SelectedRows)
                 {
-                    if (TargetMappingName == "CustomerName")
-                    {
-                        order.CustomerName = BulkEditValue;
-                    }
-
-                    else if (TargetMappingName == "Country")
-                    {
-                        order.Country = BulkEditValue;
-                    }
-
-                    else
-                    {
-                        var prop = typeof(OrderInfo).GetProperty(TargetMappingName);
-                        if (prop != null && prop.CanWrite)
-                        {
-                            object value = BulkEditValue;
-                            if (prop.PropertyType == typeof(int) && int.TryParse(BulkEditValue, out var i))
-                                value = i;
-
-                            else if (prop.PropertyType == typeof(double) && double.TryParse(BulkEditValue, out var d))
-                                value = d;
-
-                            else if (prop.PropertyType == typeof(DateTime) &&
-                            DateTime.TryParse(BulkEditValue, CultureInfo.CurrentCulture, DateTimeStyles.None, out var dt))
-                                value = value = dt;
-                            prop.SetValue(order, value);
-
-                        }
-                        break;
-                    }
+                    order.EmployeeID = EditableOrder.EmployeeID;
+                    order.CustomerName = EditableOrder.CustomerName;
+                    order.Country = EditableOrder.Country;
+                    order.Status = EditableOrder.Status;
+                    order.Date = EditableOrder.Date;
+                    order.Branch = EditableOrder.Branch;
                 }
             }
 
@@ -235,6 +310,7 @@ namespace DataGridBulkEditSample
             IsBulkPopupOpen = false;
             BulkEditValue = string.Empty;
             SelectedStatus = null;
+            EditableOrder = null;
             SelectedRows = new List<OrderInfo>();
         }
 

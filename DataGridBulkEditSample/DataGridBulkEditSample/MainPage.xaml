@@ -1,20 +1,38 @@
-﻿<?xml version="1.0" encoding="utf-8" ?>
+<?xml version="1.0" encoding="utf-8" ?>
 <ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:syncfusion="clr-namespace:Syncfusion.Maui.DataGrid;assembly=Syncfusion.Maui.DataGrid"
              xmlns:popup="clr-namespace:Syncfusion.Maui.Popup;assembly=Syncfusion.Maui.Popup"
-             x:Class="DataGridBulkEditSample.MainPage">
+             xmlns:local="clr-namespace:DataGridBulkEditSample"
+             x:Class="DataGridBulkEditSample.MainPage"
+             Title="Home">
 
     <ContentPage.Resources>
-        <Style TargetType="syncfusion:DataGridHeaderCell">
-            <Setter Property="FontAttributes" Value="Bold"/>
-        </Style>
+        <ResourceDictionary>
+            <Style TargetType="syncfusion:DataGridHeaderCell">
+                <Setter Property="FontAttributes" Value="Bold"/>
+            </Style>
+            <local:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+        </ResourceDictionary>
     </ContentPage.Resources>
     
-    <Grid>
+    <Grid RowDefinitions="Auto, *">
+        <!-- Selection mode picker -->
+        <HorizontalStackLayout Spacing="12" VerticalOptions="Start" Margin="8,0,0,8">
+            <Label Text="Selection Mode:" VerticalTextAlignment="Center"/>
+            <Picker WidthRequest="180" HeightRequest="50" SelectedItem="{Binding SelectedSelectionMode, Mode=TwoWay}">
+                <Picker.ItemsSource>
+                    <x:Array Type="{x:Type x:String}">
+                        <x:String>Cell</x:String>
+                        <x:String>Row</x:String>
+                    </x:Array>
+                </Picker.ItemsSource>
+            </Picker>
+        </HorizontalStackLayout>
+
         <syncfusion:SfDataGrid x:Name="dataGrid"
+                               Grid.Row="1"
                                AllowEditing="True"
-                               VerticalScrollBarVisibility="Never"
                                FrozenColumnCount="1"
                                SelectionMode="Multiple"
                                ColumnWidthMode="Auto"
@@ -31,8 +49,9 @@
         </syncfusion:SfDataGrid>
 
         <popup:SfPopup  x:Name="bulkEditPopup"
-                        WidthRequest="400"
-                        HeightRequest="300"
+                        Grid.Row="1"
+                        WidthRequest="500"
+                        HeightRequest="380"
                         ShowHeader="True"
                         ShowFooter="True"
                         HeaderTitle="{Binding TargetMappingName}"
@@ -45,34 +64,58 @@
 
             <popup:SfPopup.ContentTemplate>
                 <DataTemplate>
-                    <VerticalStackLayout Padding="16,16,16,32" Spacing="16">
-                        <VerticalStackLayout IsVisible="False">
-                            <VerticalStackLayout.Triggers>
-                                <DataTrigger TargetType="VerticalStackLayout"
-                                             Binding="{Binding IsStatusEditing}"
-                                             Value="True">
-                                    <Setter Property="IsVisible" Value="True" />
-                                </DataTrigger>
-                            </VerticalStackLayout.Triggers>
-                            <Label Text="Select Status" TextColor="Black" />
-                            <Picker ItemsSource="{Binding StatusOptions}"
-                                    SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
-                        </VerticalStackLayout>
+                    <ScrollView>
+                        <VerticalStackLayout Padding="16,16,16,32" Spacing="16">
+                            <!-- Cell selection UI -->
+                            <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode}">
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout"
+                                                     Binding="{Binding IsStatusEditing}"
+                                                     Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <Label Text="Select Status" TextColor="Black" />
+                                    <Picker ItemsSource="{Binding StatusOptions}"
+                                            SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
+                                </VerticalStackLayout>
 
-                        <VerticalStackLayout IsVisible="False">
-                            <VerticalStackLayout.Triggers>
-                                <DataTrigger TargetType="VerticalStackLayout"
-                                             Binding="{Binding IsStatusEditing}"
-                                             Value="False">
-                                    <Setter Property="IsVisible" Value="True" />
-                                </DataTrigger>
-                            </VerticalStackLayout.Triggers>
-                            <Label Text="New Value" TextColor="Black" />
-                            <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
-                                   Placeholder="Enter value"
-                                   VerticalOptions="Start" />
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout"
+                                                     Binding="{Binding IsStatusEditing}"
+                                                     Value="False">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <Label Text="New Value" TextColor="Black" />
+                                    <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
+                                           Placeholder="Enter value"
+                                           VerticalOptions="Start" />
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+
+                            <!-- Row selection UI -->
+                            <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode, Converter={StaticResource InverseBooleanConverter}}" Spacing="10">
+                                <Label Text="Edit Row Values" FontAttributes="Bold"/>
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                    <Label Grid.Row="0" Grid.Column="0" Text="Employee ID"/>
+                                    <Entry Grid.Row="0" Grid.Column="1" Text="{Binding EditableOrder.EmployeeID, Mode=TwoWay}" Keyboard="Numeric"/>
+                                    <Label Grid.Row="1" Grid.Column="0" Text="Customer Name"/>
+                                    <Entry Grid.Row="1" Grid.Column="1" Text="{Binding EditableOrder.CustomerName, Mode=TwoWay}"/>
+                                    <Label Grid.Row="2" Grid.Column="0" Text="Country"/>
+                                    <Entry Grid.Row="2" Grid.Column="1" Text="{Binding EditableOrder.Country, Mode=TwoWay}"/>
+                                    <Label Grid.Row="3" Grid.Column="0" Text="Status"/>
+                                    <Picker Grid.Row="3" Grid.Column="1" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding EditableOrder.Status, Mode=TwoWay}"/>
+                                    <Label Grid.Row="4" Grid.Column="0" Text="Date"/>
+                                    <DatePicker Grid.Row="4" Grid.Column="1" Date="{Binding EditableOrder.Date, Mode=TwoWay}"/>
+                                    <Label Grid.Row="5" Grid.Column="0" Text="Branch"/>
+                                    <Entry Grid.Row="5" Grid.Column="1" Text="{Binding EditableOrder.Branch, Mode=TwoWay}"/>
+                                </Grid>
+                            </VerticalStackLayout>
                         </VerticalStackLayout>
-                    </VerticalStackLayout>
+                    </ScrollView>
                 </DataTemplate>
             </popup:SfPopup.ContentTemplate>
         </popup:SfPopup>
