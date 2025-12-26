@@ -87,6 +87,9 @@ Bulk editing enables users to apply changes to multiple cells in a column simult
 *   **HeaderTitle:** Displays "Bulk Edit".
 *   **Dynamic UI:** Switches between `Entry` and `Picker` based on `IsStatusEditing`.
 *   **Bindings:** Uses `BulkEditValue` for text edits and `SelectedStatus` for status updates.
+*   **Selection Modes:**
+        Cell Mode: Applies changes to one column across selected cells.
+        Row Mode: Allows editing all fields for selected rows.
 *   **Commands:** `ApplyBulkEditCommand` and `CancelBulkEditCommand` handle logic in ViewModel.
 
 ***
