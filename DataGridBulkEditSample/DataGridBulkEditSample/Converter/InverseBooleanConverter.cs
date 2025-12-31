@@ -23,9 +23,9 @@ namespace DataGridBulkEditSample
         /// <returns>The inverted boolean value, or false if input is not a boolean.</returns>
         public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is bool b)
+            if (value is bool isBool)
             {
-                return !b;
+                return !isBool;
             }
             return false;
         }
@@ -40,9 +40,9 @@ namespace DataGridBulkEditSample
         /// <returns>The inverted boolean value, or false if input is not a boolean.</returns>
         public object ConvertBack(object? value, Type targetType, object? parameter, CultureInfo culture)
         {
-            if (value is bool b)
+            if (value is bool isBool)
             {
-                return !b;
+                return !isBool;
             }
             return false;
         }
