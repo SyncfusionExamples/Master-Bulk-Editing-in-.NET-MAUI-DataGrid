@@ -74,21 +74,28 @@ dataGrid.CellRightTapped += (s, e) =>
             }
             else
             {
+                // Row selection mode: show dialog with fixed ID/Name and empty inputs for other fields
                 viewModel.SelectedRows = GetSelectedOrderInfos();
                 var first = viewModel.SelectedRows.FirstOrDefault();
-                if (first != null)
+                if (first == null)
                 {
-                    viewModel.EditableOrder = new OrderInfo
-                    {
-                        EmployeeID = first.EmployeeID,
-                        CustomerName = first.CustomerName,
-                        Country = first.Country,
-                        Status = first.Status,
-                        Date = first.Date,
-                        Branch = first.Branch
-                    };
-                    viewModel.IsBulkPopupOpen = true;
+                    return;
                 }
+
+                // Display-only fields
+                viewModel.EditableOrder = new OrderInfo
+                {
+                    EmployeeID = first.EmployeeID,
+                    CustomerName = first.CustomerName,
+                };
+
+                // Clear row edit inputs so they start empty
+                viewModel.RowEditCountry = null;
+                viewModel.RowEditStatus = null;
+                viewModel.RowEditDate = null;
+                viewModel.RowEditBranch = null;
+
+                viewModel.IsBulkPopupOpen = true;
             }
         }
 
@@ -281,20 +288,13 @@ dataGrid.CellRightTapped += (s, e) =>
         /// <param name="isCellMode">true to set the data grid to cell selection mode; false to set it to row selection mode.</param>
         private void UpdateGridSelectionUnit(bool isCellMode)
         {
+            ClearGridSelection();
             var suProp = dataGrid.GetType().GetProperty("SelectionUnit", BindingFlags.Public | BindingFlags.Instance);
             if (suProp != null)
             {
                 var enumType = suProp.PropertyType;
                 var enumValue = Enum.Parse(enumType, isCellMode ? "Cell" : "Row");
                 suProp.SetValue(dataGrid, enumValue);
-            }
-
-            var navProp = dataGrid.GetType().GetProperty("NavigationMode", BindingFlags.Public | BindingFlags.Instance);
-            if (navProp != null)
-            {
-                var enumType = navProp.PropertyType;
-                var enumValue = Enum.Parse(enumType, isCellMode ? "Cell" : "Row");
-                navProp.SetValue(dataGrid, enumValue);
             }
 
             var selModeProp = dataGrid.GetType().GetProperty("SelectionMode", BindingFlags.Public | BindingFlags.Instance);

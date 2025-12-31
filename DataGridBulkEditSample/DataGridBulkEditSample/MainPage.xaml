@@ -35,11 +35,11 @@
                                AllowEditing="True"
                                FrozenColumnCount="1"
                                SelectionMode="Multiple"
-                               ColumnWidthMode="Auto"
+                               ColumnWidthMode="Fill"
                                ItemsSource="{Binding Orders}">
 
             <syncfusion:SfDataGrid.Columns>
-                <syncfusion:DataGridNumericColumn MappingName="EmployeeID" HeaderText="ID" CellTextAlignment="Center" HeaderTextAlignment="Center" Format="N0"/>
+                <syncfusion:DataGridNumericColumn MappingName="EmployeeID" HeaderText="ID" CellTextAlignment="Center" HeaderTextAlignment="Center" Format="N0" AllowEditing="False"/>
                 <syncfusion:DataGridTextColumn MappingName="CustomerName" HeaderText="Name" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
                 <syncfusion:DataGridDateColumn MappingName="Date" HeaderText="Date" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
                 <syncfusion:DataGridTextColumn MappingName="Country" HeaderText="Country" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
@@ -66,8 +66,9 @@
                 <DataTemplate>
                     <ScrollView>
                         <VerticalStackLayout Padding="16,16,16,32" Spacing="16">
-                            <!-- Cell selection UI -->
+                            <!-- Cell selection UI (no column picker; column inferred from selected cells) -->
                             <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode}">
+                                <!-- Status editor -->
                                 <VerticalStackLayout IsVisible="False">
                                     <VerticalStackLayout.Triggers>
                                         <DataTrigger TargetType="VerticalStackLayout"
@@ -81,13 +82,29 @@
                                             SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
                                 </VerticalStackLayout>
 
+                                <!-- Date editor -->
                                 <VerticalStackLayout IsVisible="False">
                                     <VerticalStackLayout.Triggers>
                                         <DataTrigger TargetType="VerticalStackLayout"
-                                                     Binding="{Binding IsStatusEditing}"
-                                                     Value="False">
+                                                     Binding="{Binding IsDateEditing}"
+                                                     Value="True">
                                             <Setter Property="IsVisible" Value="True" />
                                         </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <Label Text="Select Date" TextColor="Black" />
+                                    <DatePicker Date="{Binding BulkEditDate, Mode=TwoWay}"/>
+                                </VerticalStackLayout>
+
+                                <!-- Text editor for Country/Branch (and any other text columns) -->
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <MultiTrigger TargetType="VerticalStackLayout">
+                                            <MultiTrigger.Conditions>
+                                                <BindingCondition Binding="{Binding IsStatusEditing}" Value="False"/>
+                                                <BindingCondition Binding="{Binding IsDateEditing}" Value="False"/>
+                                            </MultiTrigger.Conditions>
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </MultiTrigger>
                                     </VerticalStackLayout.Triggers>
                                     <Label Text="New Value" TextColor="Black" />
                                     <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
@@ -96,22 +113,28 @@
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
 
-                            <!-- Row selection UI -->
+                            <!-- Row selection UI (dialog editing) -->
                             <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode, Converter={StaticResource InverseBooleanConverter}}" Spacing="10">
                                 <Label Text="Edit Row Values" FontAttributes="Bold"/>
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                    <!-- Fixed (not editable) -->
                                     <Label Grid.Row="0" Grid.Column="0" Text="Employee ID"/>
-                                    <Entry Grid.Row="0" Grid.Column="1" Text="{Binding EditableOrder.EmployeeID, Mode=TwoWay}" Keyboard="Numeric"/>
+                                    <Entry Grid.Row="0" Grid.Column="1" Text="{Binding EditableOrder.EmployeeID}" IsEnabled="False"/>
                                     <Label Grid.Row="1" Grid.Column="0" Text="Customer Name"/>
-                                    <Entry Grid.Row="1" Grid.Column="1" Text="{Binding EditableOrder.CustomerName, Mode=TwoWay}"/>
+                                    <Entry Grid.Row="1" Grid.Column="1" Text="{Binding EditableOrder.CustomerName}" IsEnabled="False"/>
+
+                                    <!-- Editable when user enters values (empty means ignore) -->
                                     <Label Grid.Row="2" Grid.Column="0" Text="Country"/>
-                                    <Entry Grid.Row="2" Grid.Column="1" Text="{Binding EditableOrder.Country, Mode=TwoWay}"/>
+                                    <Entry Grid.Row="2" Grid.Column="1" Text="{Binding RowEditCountry, Mode=TwoWay}" Placeholder="Leave empty to keep"/>
+
                                     <Label Grid.Row="3" Grid.Column="0" Text="Status"/>
-                                    <Picker Grid.Row="3" Grid.Column="1" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding EditableOrder.Status, Mode=TwoWay}"/>
+                                    <Picker Grid.Row="3" Grid.Column="1" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding RowEditStatus, Mode=TwoWay}"/>
+
                                     <Label Grid.Row="4" Grid.Column="0" Text="Date"/>
-                                    <DatePicker Grid.Row="4" Grid.Column="1" Date="{Binding EditableOrder.Date, Mode=TwoWay}"/>
+                                    <DatePicker Grid.Row="4" Grid.Column="1" Date="{Binding RowEditDate, Mode=TwoWay}"/>
+
                                     <Label Grid.Row="5" Grid.Column="0" Text="Branch"/>
-                                    <Entry Grid.Row="5" Grid.Column="1" Text="{Binding EditableOrder.Branch, Mode=TwoWay}"/>
+                                    <Entry Grid.Row="5" Grid.Column="1" Text="{Binding RowEditBranch, Mode=TwoWay}" Placeholder="Leave empty to keep"/>
                                 </Grid>
                             </VerticalStackLayout>
                         </VerticalStackLayout>
