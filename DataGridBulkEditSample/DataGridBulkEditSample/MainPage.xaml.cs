@@ -10,7 +10,6 @@ namespace DataGridBulkEditSample
     public partial class MainPage : ContentPage
     {
         private MainViewModel viewModel;
-
         public MainPage()
         {
             InitializeComponent();
@@ -74,7 +73,6 @@ dataGrid.CellRightTapped += (s, e) =>
             }
             else
             {
-                // Row selection mode: show dialog with fixed ID/Name and empty inputs for other fields
                 viewModel.SelectedRows = GetSelectedOrderInfos();
                 var first = viewModel.SelectedRows.FirstOrDefault();
                 if (first == null)
@@ -82,22 +80,17 @@ dataGrid.CellRightTapped += (s, e) =>
                     return;
                 }
 
-                // Display-only fields
                 viewModel.EditableOrder = new OrderInfo
                 {
                     EmployeeID = first.EmployeeID,
                     CustomerName = first.CustomerName,
                 };
 
-                // Clear row edit inputs so they start empty
                 viewModel.RowEditCountry = null;
                 viewModel.RowEditStatus = null;
                 viewModel.RowEditDate = null;
                 viewModel.RowEditBranch = null;
-
-                // In row mode, show a generic header text
                 viewModel.TargetMappingName = "Bulk Edit Your Values";
-
                 viewModel.IsBulkPopupOpen = true;
             }
         }
@@ -109,36 +102,32 @@ dataGrid.CellRightTapped += (s, e) =>
         /// <returns></returns>
         private string? ResolveMappingNameFromEventArgs(object eventArgs)
         {
-            try
+            var argType = eventArgs.GetType();
+            var rciProp = argType.GetProperty("RowColumnIndex");
+            var rci = rciProp?.GetValue(eventArgs);
+            if (rci == null)
             {
-                var argType = eventArgs.GetType();
-                var rciProp = argType.GetProperty("RowColumnIndex");
-                var rci = rciProp?.GetValue(eventArgs);
-                if (rci == null)
-                {
-                    return null;
-                }
+                return null;
+            }
 
-                var colIndexProp = rci.GetType().GetProperty("ColumnIndex");
-                if (colIndexProp == null)
-                {
-                    return null;
-                }
+            var colIndexProp = rci.GetType().GetProperty("ColumnIndex");
+            if (colIndexProp == null)
+            {
+                return null;
+            }
 
-                var colIndexObj = colIndexProp.GetValue(rci);
-                if (colIndexObj is int colIndex && colIndex >= 0)
+            var colIndexObj = colIndexProp.GetValue(rci);
+            if (colIndexObj is int colIndex && colIndex >= 0)
+            {
+                var columnsProp = dataGrid.GetType().GetProperty("Columns");
+                var columns = columnsProp?.GetValue(dataGrid) as System.Collections.IList;
+                if (columns != null && colIndex < columns.Count)
                 {
-                    var columnsProp = dataGrid.GetType().GetProperty("Columns");
-                    var columns = columnsProp?.GetValue(dataGrid) as System.Collections.IList;
-                    if (columns != null && colIndex < columns.Count)
-                    {
-                        var column = columns[colIndex];
-                        var mapProp = column?.GetType().GetProperty("MappingName");
-                        return mapProp?.GetValue(column) as string;
-                    }
+                    var column = columns[colIndex];
+                    var mapProp = column?.GetType().GetProperty("MappingName");
+                    return mapProp?.GetValue(column) as string;
                 }
             }
-            catch { }
             return null;
         }
 
@@ -148,28 +137,25 @@ dataGrid.CellRightTapped += (s, e) =>
         /// <returns></returns>
         private string? GetFirstSelectedMappingName()
         {
-            try
+            var gridType = dataGrid.GetType();
+            var selectedCellsProp = gridType.GetProperty("SelectedCells", BindingFlags.Public | BindingFlags.Instance);
+            var selectedCells = selectedCellsProp?.GetValue(dataGrid) as System.Collections.IEnumerable;
+            if (selectedCells == null)
             {
-                var gridType = dataGrid.GetType();
-                var selectedCellsProp = gridType.GetProperty("SelectedCells", BindingFlags.Public | BindingFlags.Instance);
-                var selectedCells = selectedCellsProp?.GetValue(dataGrid) as System.Collections.IEnumerable;
-                if (selectedCells == null)
-                {
-                    return null;
-                }
-
-                foreach (var cellObj in selectedCells)
-                {
-                    var cellType = cellObj.GetType();
-                    var columnProp = cellType.GetProperty("Column");
-                    var column = columnProp?.GetValue(cellObj);
-                    var mappingNameProp = column?.GetType().GetProperty("MappingName");
-                    var map = mappingNameProp?.GetValue(column) as string;
-                    if (!string.IsNullOrWhiteSpace(map))
-                        return map;
-                }
+                return null;
             }
-            catch { }
+
+            foreach (var cellObj in selectedCells)
+            {
+                var cellType = cellObj.GetType();
+                var columnProp = cellType.GetProperty("Column");
+                var column = columnProp?.GetValue(cellObj);
+                var mappingNameProp = column?.GetType().GetProperty("MappingName");
+                var map = mappingNameProp?.GetValue(column) as string;
+                if (!string.IsNullOrWhiteSpace(map))
+                    return map;
+            }
+
             return null;
         }
 
