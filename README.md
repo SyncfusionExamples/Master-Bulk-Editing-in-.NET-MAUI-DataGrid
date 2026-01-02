@@ -90,7 +90,6 @@ Bulk editing enables users to apply changes to multiple cells in a column simult
 *   **Selection Modes:**
         Cell Mode: Applies changes to one column across selected cells.
         Row Mode: Allows editing all fields for selected rows.
-*   **Commands:** `ApplyBulkEditCommand` and `CancelBulkEditCommand` handle logic in ViewModel.
 
 ***
 

@@ -95,6 +95,9 @@ dataGrid.CellRightTapped += (s, e) =>
                 viewModel.RowEditDate = null;
                 viewModel.RowEditBranch = null;
 
+                // In row mode, show a generic header text
+                viewModel.TargetMappingName = "Bulk Edit Your Values";
+
                 viewModel.IsBulkPopupOpen = true;
             }
         }

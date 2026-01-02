@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
              xmlns:syncfusion="clr-namespace:Syncfusion.Maui.DataGrid;assembly=Syncfusion.Maui.DataGrid"
              xmlns:popup="clr-namespace:Syncfusion.Maui.Popup;assembly=Syncfusion.Maui.Popup"
+             xmlns:sfin="clr-namespace:Syncfusion.Maui.Core;assembly=Syncfusion.Maui.Core"
              xmlns:local="clr-namespace:DataGridBulkEditSample"
              x:Class="DataGridBulkEditSample.MainPage"
              Title="Home">
@@ -11,6 +12,8 @@
         <ResourceDictionary>
             <Style TargetType="syncfusion:DataGridHeaderCell">
                 <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="Background" Value="#512BD4"/>
+                <Setter Property="TextColor" Value="White"/>
             </Style>
             <local:InverseBooleanConverter x:Key="InverseBooleanConverter" />
         </ResourceDictionary>
@@ -19,15 +22,16 @@
     <Grid RowDefinitions="Auto, *">
         <!-- Selection mode picker -->
         <HorizontalStackLayout Spacing="12" VerticalOptions="Start" Margin="8,0,0,8">
-            <Label Text="Selection Mode:" VerticalTextAlignment="Center"/>
-            <Picker WidthRequest="180" HeightRequest="50" SelectedItem="{Binding SelectedSelectionMode, Mode=TwoWay}">
-                <Picker.ItemsSource>
-                    <x:Array Type="{x:Type x:String}">
-                        <x:String>Cell</x:String>
-                        <x:String>Row</x:String>
-                    </x:Array>
-                </Picker.ItemsSource>
-            </Picker>
+            <sfin:SfTextInputLayout WidthRequest="200" Hint="Mode">
+                <Picker HeightRequest="40" SelectedItem="{Binding SelectedSelectionMode, Mode=TwoWay}">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>Cell</x:String>
+                            <x:String>Row</x:String>
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+            </sfin:SfTextInputLayout>
         </HorizontalStackLayout>
 
         <syncfusion:SfDataGrid x:Name="dataGrid"
@@ -36,6 +40,7 @@
                                FrozenColumnCount="1"
                                SelectionMode="Multiple"
                                ColumnWidthMode="Fill"
+                               GridLinesVisibility="Both"
                                ItemsSource="{Binding Orders}">
 
             <syncfusion:SfDataGrid.Columns>
@@ -77,9 +82,11 @@
                                             <Setter Property="IsVisible" Value="True" />
                                         </DataTrigger>
                                     </VerticalStackLayout.Triggers>
-                                    <Label Text="Select Status" TextColor="Black" />
-                                    <Picker ItemsSource="{Binding StatusOptions}"
-                                            SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
+                                    <sfin:SfTextInputLayout Hint="Select Status">
+                                        <Picker
+                                                ItemsSource="{Binding StatusOptions}"
+                                                SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
                                 </VerticalStackLayout>
 
                                 <!-- Date editor -->
@@ -91,8 +98,9 @@
                                             <Setter Property="IsVisible" Value="True" />
                                         </DataTrigger>
                                     </VerticalStackLayout.Triggers>
-                                    <Label Text="Select Date" TextColor="Black" />
-                                    <DatePicker Date="{Binding BulkEditDate, Mode=TwoWay}"/>
+                                    <sfin:SfTextInputLayout Hint="Select Date">
+                                        <DatePicker Date="{Binding BulkEditDate, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
                                 </VerticalStackLayout>
 
                                 <!-- Text editor for Country/Branch (and any other text columns) -->
@@ -106,35 +114,33 @@
                                             <Setter Property="IsVisible" Value="True" />
                                         </MultiTrigger>
                                     </VerticalStackLayout.Triggers>
-                                    <Label Text="New Value" TextColor="Black" />
-                                    <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"
-                                           Placeholder="Enter value"
-                                           VerticalOptions="Start" />
+                                    <sfin:SfTextInputLayout Hint="Enter New value">
+                                        <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
                                 </VerticalStackLayout>
                             </VerticalStackLayout>
 
                             <!-- Row selection UI (dialog editing) -->
                             <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode, Converter={StaticResource InverseBooleanConverter}}" Spacing="10">
-                                <Label Text="Edit Row Values" FontAttributes="Bold"/>
+                                <Label Text="Edit Your Values" FontAttributes="Bold"/>
                                 <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
-                                    <!-- Fixed (not editable) -->
-                                    <Label Grid.Row="0" Grid.Column="0" Text="Employee ID"/>
-                                    <Entry Grid.Row="0" Grid.Column="1" Text="{Binding EditableOrder.EmployeeID}" IsEnabled="False"/>
-                                    <Label Grid.Row="1" Grid.Column="0" Text="Customer Name"/>
-                                    <Entry Grid.Row="1" Grid.Column="1" Text="{Binding EditableOrder.CustomerName}" IsEnabled="False"/>
-
+                                    
                                     <!-- Editable when user enters values (empty means ignore) -->
-                                    <Label Grid.Row="2" Grid.Column="0" Text="Country"/>
-                                    <Entry Grid.Row="2" Grid.Column="1" Text="{Binding RowEditCountry, Mode=TwoWay}" Placeholder="Leave empty to keep"/>
+                                    <sfin:SfTextInputLayout Grid.Row="2" Grid.Column="1" Hint="Country">
+                                        <Entry Text="{Binding RowEditCountry, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
 
-                                    <Label Grid.Row="3" Grid.Column="0" Text="Status"/>
-                                    <Picker Grid.Row="3" Grid.Column="1" ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding RowEditStatus, Mode=TwoWay}"/>
+                                    <sfin:SfTextInputLayout Grid.Row="3" Grid.Column="1" Hint="Select Status">
+                                        <Picker ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding RowEditStatus, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
 
-                                    <Label Grid.Row="4" Grid.Column="0" Text="Date"/>
-                                    <DatePicker Grid.Row="4" Grid.Column="1" Date="{Binding RowEditDate, Mode=TwoWay}"/>
+                                    <sfin:SfTextInputLayout Grid.Row="4" Grid.Column="1" Hint="Select Date">
+                                        <DatePicker Date="{Binding RowEditDate, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
 
-                                    <Label Grid.Row="5" Grid.Column="0" Text="Branch"/>
-                                    <Entry Grid.Row="5" Grid.Column="1" Text="{Binding RowEditBranch, Mode=TwoWay}" Placeholder="Leave empty to keep"/>
+                                    <sfin:SfTextInputLayout Grid.Row="5" Grid.Column="1" Hint="Branch">
+                                        <Entry Text="{Binding RowEditBranch, Mode=TwoWay}"/>
+                                    </sfin:SfTextInputLayout>
                                 </Grid>
                             </VerticalStackLayout>
                         </VerticalStackLayout>
