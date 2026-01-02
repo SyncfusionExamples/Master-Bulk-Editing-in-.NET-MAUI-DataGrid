@@ -1,0 +1,152 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             xmlns:syncfusion="clr-namespace:Syncfusion.Maui.DataGrid;assembly=Syncfusion.Maui.DataGrid"
+             xmlns:popup="clr-namespace:Syncfusion.Maui.Popup;assembly=Syncfusion.Maui.Popup"
+             xmlns:input="clr-namespace:Syncfusion.Maui.Core;assembly=Syncfusion.Maui.Core"
+             xmlns:local="clr-namespace:DataGridBulkEditSample"
+             x:Class="DataGridBulkEditSample.MainPage"
+             Title="Home">
+
+    <ContentPage.Resources>
+        <ResourceDictionary>
+            <Style TargetType="syncfusion:DataGridHeaderCell">
+                <Setter Property="FontAttributes" Value="Bold"/>
+                <Setter Property="Background" Value="#512BD4"/>
+                <Setter Property="TextColor" Value="White"/>
+            </Style>
+            <local:InverseBooleanConverter x:Key="InverseBooleanConverter" />
+        </ResourceDictionary>
+    </ContentPage.Resources>
+    
+    <Grid RowDefinitions="Auto, *">
+        <!-- Selection mode picker -->
+        <HorizontalStackLayout Spacing="12" VerticalOptions="Start" Margin="8,0,0,8">
+            <input:SfTextInputLayout WidthRequest="200" Hint="Mode">
+                <Picker HeightRequest="40" SelectedItem="{Binding SelectedSelectionMode, Mode=TwoWay}">
+                    <Picker.ItemsSource>
+                        <x:Array Type="{x:Type x:String}">
+                            <x:String>Cell</x:String>
+                            <x:String>Row</x:String>
+                        </x:Array>
+                    </Picker.ItemsSource>
+                </Picker>
+            </input:SfTextInputLayout>
+        </HorizontalStackLayout>
+
+        <syncfusion:SfDataGrid x:Name="dataGrid"
+                               Grid.Row="1"
+                               AllowEditing="True"
+                               FrozenColumnCount="1"
+                               SelectionMode="Multiple"
+                               ColumnWidthMode="Fill"
+                               GridLinesVisibility="Both"
+                               ItemsSource="{Binding Orders}">
+
+            <syncfusion:SfDataGrid.Columns>
+                <syncfusion:DataGridNumericColumn MappingName="EmployeeID" HeaderText="ID" CellTextAlignment="Center" HeaderTextAlignment="Center" Format="N0" AllowEditing="False"/>
+                <syncfusion:DataGridTextColumn MappingName="CustomerName" HeaderText="Name" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+                <syncfusion:DataGridDateColumn MappingName="Date" HeaderText="Date" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+                <syncfusion:DataGridTextColumn MappingName="Country" HeaderText="Country" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+                <syncfusion:DataGridTextColumn MappingName="Status" HeaderText="Status" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+                <syncfusion:DataGridTextColumn MappingName="Branch" HeaderText="Branch" CellTextAlignment="Center" HeaderTextAlignment="Center"/>
+            </syncfusion:SfDataGrid.Columns>
+        </syncfusion:SfDataGrid>
+
+        <popup:SfPopup  x:Name="bulkEditPopup"
+                        Grid.Row="1"
+                        WidthRequest="500"
+                        HeightRequest="380"
+                        ShowHeader="True"
+                        ShowFooter="True"
+                        HeaderTitle="{Binding TargetMappingName}"
+                        AppearanceMode="TwoButton"
+                        AcceptButtonText="Apply"
+                        DeclineButtonText="Cancel"
+                        IsOpen="{Binding IsBulkPopupOpen, Mode=TwoWay}"
+                        AcceptCommand="{Binding ApplyBulkEditCommand}"
+                        DeclineCommand="{Binding CancelBulkEditCommand}">
+
+            <popup:SfPopup.ContentTemplate>
+                <DataTemplate>
+                    <ScrollView>
+                        <VerticalStackLayout Padding="16,16,16,32" Spacing="16">
+                            <!-- Cell selection UI (no column picker; column inferred from selected cells) -->
+                            <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode}">
+                                <!-- Status editor -->
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout"
+                                                     Binding="{Binding IsStatusEditing}"
+                                                     Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <input:SfTextInputLayout Hint="Select Status">
+                                        <Picker
+                                                ItemsSource="{Binding StatusOptions}"
+                                                SelectedItem="{Binding SelectedStatus, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+                                </VerticalStackLayout>
+
+                                <!-- Date editor -->
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <DataTrigger TargetType="VerticalStackLayout"
+                                                     Binding="{Binding IsDateEditing}"
+                                                     Value="True">
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </DataTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <input:SfTextInputLayout Hint="Select Date">
+                                        <DatePicker Date="{Binding BulkEditDate, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+                                </VerticalStackLayout>
+
+                                <!-- Text editor for Country/Branch (and any other text columns) -->
+                                <VerticalStackLayout IsVisible="False">
+                                    <VerticalStackLayout.Triggers>
+                                        <MultiTrigger TargetType="VerticalStackLayout">
+                                            <MultiTrigger.Conditions>
+                                                <BindingCondition Binding="{Binding IsStatusEditing}" Value="False"/>
+                                                <BindingCondition Binding="{Binding IsDateEditing}" Value="False"/>
+                                            </MultiTrigger.Conditions>
+                                            <Setter Property="IsVisible" Value="True" />
+                                        </MultiTrigger>
+                                    </VerticalStackLayout.Triggers>
+                                    <input:SfTextInputLayout Hint="Enter New value">
+                                        <Entry Text="{Binding BulkEditValue, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+                                </VerticalStackLayout>
+                            </VerticalStackLayout>
+
+                            <!-- Row selection UI (dialog editing) -->
+                            <VerticalStackLayout IsVisible="{Binding IsCellSelectionMode, Converter={StaticResource InverseBooleanConverter}}" Spacing="10">
+                                <Label Text="Edit Your Values" FontAttributes="Bold"/>
+                                <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto" ColumnSpacing="8" RowSpacing="8">
+                                    
+                                    <!-- Editable when user enters values (empty means ignore) -->
+                                    <input:SfTextInputLayout Grid.Row="2" Grid.Column="1" Hint="Country">
+                                        <Entry Text="{Binding RowEditCountry, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+
+                                    <input:SfTextInputLayout Grid.Row="3" Grid.Column="1" Hint="Select Status">
+                                        <Picker ItemsSource="{Binding StatusOptions}" SelectedItem="{Binding RowEditStatus, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+
+                                    <input:SfTextInputLayout Grid.Row="4" Grid.Column="1" Hint="Select Date">
+                                        <DatePicker Date="{Binding RowEditDate, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+
+                                    <input:SfTextInputLayout Grid.Row="5" Grid.Column="1" Hint="Branch">
+                                        <Entry Text="{Binding RowEditBranch, Mode=TwoWay}"/>
+                                    </input:SfTextInputLayout>
+                                </Grid>
+                            </VerticalStackLayout>
+                        </VerticalStackLayout>
+                    </ScrollView>
+                </DataTemplate>
+            </popup:SfPopup.ContentTemplate>
+        </popup:SfPopup>
+    </Grid>
+</ContentPage>
