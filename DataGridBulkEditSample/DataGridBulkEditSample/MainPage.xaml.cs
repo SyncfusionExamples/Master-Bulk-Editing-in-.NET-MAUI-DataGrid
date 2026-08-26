@@ -1,15 +1,12 @@
 using Syncfusion.Maui.DataGrid;
-using System.Globalization;
-using System.Linq;
-using System.Reflection;
 using System.ComponentModel;
-using System.Collections;
 
 namespace DataGridBulkEditSample
 {
     public partial class MainPage : ContentPage
     {
         private MainViewModel viewModel;
+
         public MainPage()
         {
             InitializeComponent();
@@ -20,140 +17,193 @@ namespace DataGridBulkEditSample
             UpdateGridSelectionUnit(viewModel.IsCellSelectionMode);
 
 #if WINDOWS || MACCATALYST
-// Desktop: right-click opens the bulk edit popup.
-dataGrid.CellRightTapped += (s, e) =>
-{
-    var mapping = e.Column?.MappingName
-                  ?? ResolveMappingNameFromEventArgs(e)
-                  ?? GetFirstSelectedMappingName()
-                  ?? "Status";
-
-    var rows = GetSelectedOrderInfosFromSelectedCells(mapping);
-    if (rows.Count == 0)
-    {
-        rows = GetSelectedOrderInfos().ToList();
-    }
-
-    viewModel.SelectedRows = rows;
-    OpenPopupBasedOnMode(mapping);
-};
+            // Desktop: right-click opens the bulk edit popup.
+            dataGrid.CellRightTapped += OnCellRightTapped;
 #else
             // Mobile (Android/iOS): long press opens the popup
-            dataGrid.CellLongPress += (s, e) => OpenPopupBasedOnMode(e.Column?.MappingName);
+            dataGrid.CellLongPress += OnCellLongPress;
 #endif
         }
 
+#if WINDOWS || MACCATALYST
         /// <summary>
-        /// Opens the popup depending on the chosen selection mode.
-        /// Cell mode: uses mapping name for single-column edit across selected rows.
-        /// Row mode: shows dialog to edit entire row, seeded from the first selected row.
+        /// Opens the bulk edit popup on right-click (desktop platforms).
+        /// In row-selection mode the mapping name is irrelevant — the entire
+        /// right-clicked row plus any other already-selected rows form the bulk set.
         /// </summary>
-        private void OpenPopupBasedOnMode(string? mappingName)
+        private void OnCellRightTapped(object? sender, DataGridCellRightTappedEventArgs e)
         {
+            // Commit any in-progress edit BEFORE we capture selection, otherwise the
+            // pop-up's bindings may snapshot a stale value.
             CommitCurrentEditIfAny();
+            DataGridCellRightTappedEventArgs longPress = e;
 
             if (viewModel.IsCellSelectionMode)
             {
-                if (string.IsNullOrEmpty(mappingName))
-                {
-                    mappingName = GetFirstSelectedMappingName() ?? viewModel.TargetMappingName;
-                }
-
-                if (string.IsNullOrEmpty(mappingName))
-                {
-                    return;
-                }
-
-                viewModel.TargetMappingName = mappingName;
-                viewModel.SelectedRows = GetSelectedOrderInfosFromSelectedCells(mappingName);
-                if (viewModel.SelectedRows.Count > 0)
-                {
-                    viewModel.IsBulkPopupOpen = true;
-                }
+                OpenPopupForCellMode(longPress, null);
             }
             else
             {
-                viewModel.SelectedRows = GetSelectedOrderInfos();
-                var first = viewModel.SelectedRows.FirstOrDefault();
-                if (first == null)
+                OpenPopupForRowMode(longPress, null);
+            }
+        }
+#else
+        /// <summary>
+        /// Opens the bulk edit popup on long press (mobile platforms).
+        /// </summary>
+        private void OnCellLongPress(object? sender, DataGridCellLongPressEventArgs e)
+        {
+            CommitCurrentEditIfAny();
+
+            DataGridCellLongPressEventArgs longPress = e;
+            if (viewModel.IsCellSelectionMode)
+            {
+                OpenPopupForCellMode(null, longPress);
+            }
+            else
+            {
+                OpenPopupForRowMode(null, longPress);
+            }
+        }
+#endif
+
+        /// <summary>
+        /// Cell mode: target column is whatever cell was tapped.
+        /// Selected rows are the rows of the selected cells (deduped). If the user
+        /// tapped a cell outside the existing selection, only the tapped row counts.
+        /// </summary>
+        private void OpenPopupForCellMode(DataGridCellRightTappedEventArgs? rightTapped,
+                                          DataGridCellLongPressEventArgs? longPress)
+        {
+            string? mapping = rightTapped?.Column?.MappingName
+                              ?? longPress?.Column?.MappingName;
+
+            // If the user tapped outside the current selection, fall back to the
+            // first currently-selected cell's mapping name.
+            if (string.IsNullOrWhiteSpace(mapping) ||
+                (dataGrid.GetSelectedCells()?.Count > 0 &&
+                 !dataGrid.GetSelectedCells()!.Any(c => c.Column?.MappingName == mapping)))
+            {
+                mapping = GetFirstSelectedMappingName();
+            }
+
+            if (string.IsNullOrWhiteSpace(mapping))
+            {
+                mapping = viewModel.TargetMappingName;
+            }
+
+            if (string.IsNullOrWhiteSpace(mapping))
+            {
+                return;
+            }
+
+            viewModel.TargetMappingName = mapping;
+
+            var selectedFromCells = GetSelectedOrderInfosFromSelectedCells(mapping);
+            if (selectedFromCells.Count == 0)
+            {
+                // Fall back to whatever row the user just clicked/long-pressed.
+                selectedFromCells = rightTapped != null
+                    ? GetOrderInfosFromRowData(rightTapped.RowData)
+                    : GetOrderInfosFromRowData(longPress?.RowData);
+
+                if (selectedFromCells.Count == 0)
                 {
                     return;
                 }
-
-                viewModel.EditableOrder = new OrderInfo
-                {
-                    EmployeeID = first.EmployeeID,
-                    CustomerName = first.CustomerName,
-                };
-
-                viewModel.RowEditCountry = null;
-                viewModel.RowEditStatus = null;
-                viewModel.RowEditDate = null;
-                viewModel.RowEditBranch = null;
-                viewModel.TargetMappingName = "Bulk Edit Your Values";
-                viewModel.IsBulkPopupOpen = true;
             }
+
+            viewModel.SelectedRows = selectedFromCells;
+            viewModel.IsBulkPopupOpen = true;
         }
 
         /// <summary>
-        /// Resolves the mapping name of the column from the event arguments.
+        /// Row mode: capture every selected row (SelectedRows on the grid).
+        /// Snapshots selection BEFORE the popup opens so the Apply path has a
+        /// stable list even if the grid selection is cleared while the popup is up.
+        /// Also seeds the row-mode editor inputs from the first selected row so the
+        /// editor is "loaded" with the user's existing data.
         /// </summary>
-        /// <param name="eventArgs"></param>
-        /// <returns></returns>
-        private string? ResolveMappingNameFromEventArgs(object eventArgs)
+        private void OpenPopupForRowMode(DataGridCellRightTappedEventArgs? rightTapped,
+                                         DataGridCellLongPressEventArgs? longPress)
         {
-            var argType = eventArgs.GetType();
-            var rciProp = argType.GetProperty("RowColumnIndex");
-            var rci = rciProp?.GetValue(eventArgs);
-            if (rci == null)
-            {
-                return null;
-            }
+            // Snapshot the selected rows from the grid IMMEDIATELY. After this point
+            // we never re-read dataGrid.SelectedRows — that list may be mutated by
+            // the popup's open/close cycle or by selection-mode toggling.
+            var rows = GetSelectedOrderInfos();
 
-            var colIndexProp = rci.GetType().GetProperty("ColumnIndex");
-            if (colIndexProp == null)
+            // Make sure the row that was tapped (right-click / long-press) is
+            // included even if the user hadn't multi-selected it yet. We pull it
+            // straight out of the event args (this is the same row the user is
+            // currently pointing at).
+            var clicked = rightTapped != null
+                ? GetOrderInfosFromRowData(rightTapped.RowData)
+                : GetOrderInfosFromRowData(longPress?.RowData);
+            foreach (var order in clicked)
             {
-                return null;
-            }
-
-            var colIndexObj = colIndexProp.GetValue(rci);
-            if (colIndexObj is int colIndex && colIndex >= 0)
-            {
-                var columnsProp = dataGrid.GetType().GetProperty("Columns");
-                var columns = columnsProp?.GetValue(dataGrid) as System.Collections.IList;
-                if (columns != null && colIndex < columns.Count)
+                if (!rows.Contains(order))
                 {
-                    var column = columns[colIndex];
-                    var mapProp = column?.GetType().GetProperty("MappingName");
-                    return mapProp?.GetValue(column) as string;
+                    rows.Add(order);
                 }
             }
-            return null;
+
+            if (rows.Count == 0)
+            {
+                return;
+            }
+
+            viewModel.SelectedRows = rows;
+            // Seed the row-mode editors with the first selected row's values so the
+            // editor surfaces the user's existing data instead of opening blank.
+            SeedRowModeEditorsFromFirstRow(rows[0]);
+            viewModel.TargetMappingName = "Bulk Edit Your Values";
+            viewModel.IsBulkPopupOpen = true;
         }
 
         /// <summary>
-        /// Gets the mapping name of the first selected cell in the data grid.
+        /// Seeds every row-mode editor input from the supplied row's values so the
+        /// popup is "loaded" with the user's existing data. EmployeeID is the
+        /// primary key and is not editable from row mode.
         /// </summary>
-        /// <returns></returns>
+        private void SeedRowModeEditorsFromFirstRow(OrderInfo firstRow)
+        {
+            viewModel.RowEditCustomerName = firstRow.CustomerName;
+            viewModel.RowEditCountry = firstRow.Country;
+            viewModel.RowEditStatus = firstRow.Status;
+            viewModel.RowEditDate = firstRow.Date;
+            viewModel.RowEditBranch = firstRow.Branch;
+        }
+
+        /// <summary>
+        /// Wraps an arbitrary <see cref="object"/> row-data into an OrderInfo list.
+        /// </summary>
+        private static IList<OrderInfo> GetOrderInfosFromRowData(object? rowData)
+        {
+            if (rowData is OrderInfo order)
+            {
+                return new List<OrderInfo> { order };
+            }
+            return new List<OrderInfo>();
+        }
+
+        /// <summary>
+        /// Gets the mapping name (column) of the first selected cell in the data grid.
+        /// </summary>
         private string? GetFirstSelectedMappingName()
         {
-            var gridType = dataGrid.GetType();
-            var selectedCellsProp = gridType.GetProperty("SelectedCells", BindingFlags.Public | BindingFlags.Instance);
-            var selectedCells = selectedCellsProp?.GetValue(dataGrid) as System.Collections.IEnumerable;
-            if (selectedCells == null)
+            var selectedCells = dataGrid.GetSelectedCells();
+            if (selectedCells == null || selectedCells.Count == 0)
             {
                 return null;
             }
 
-            foreach (var cellObj in selectedCells)
+            foreach (var info in selectedCells)
             {
-                var cellType = cellObj.GetType();
-                var columnProp = cellType.GetProperty("Column");
-                var column = columnProp?.GetValue(cellObj);
-                var mappingNameProp = column?.GetType().GetProperty("MappingName");
-                var map = mappingNameProp?.GetValue(column) as string;
+                var map = info.Column?.MappingName;
                 if (!string.IsNullOrWhiteSpace(map))
+                {
                     return map;
+                }
             }
 
             return null;
@@ -177,44 +227,25 @@ dataGrid.CellRightTapped += (s, e) =>
 
         /// <summary>
         /// Returns a strongly-typed list of selected <see cref="OrderInfo"/> models.
-        /// Handles differences in Syncfusion DataGrid versions where selection may expose
-        /// model instances directly or via <c>DataGridRowInfo</c>.
         /// </summary>
         private IList<OrderInfo> GetSelectedOrderInfos()
         {
             var result = new List<OrderInfo>();
             var rows = dataGrid.SelectedRows;
-            if (rows != null)
+            if (rows == null)
             {
-                foreach (var item in rows)
-                {
-                    if (item is OrderInfo o1)
-                    {
-                        result.Add(o1);
-                    }
-                    else if (item is DataGridRowInfo rowInfo && rowInfo.RowData is OrderInfo o2)
-                    {
-                        result.Add(o2);
-                    }
-                }
+                return result;
             }
 
-            if (result.Count == 0)
+            foreach (var item in rows)
             {
-                var items = dataGrid.SelectedRows;
-                if (items != null)
+                if (item is OrderInfo o1)
                 {
-                    foreach (var item in items)
-                    {
-                        if (item is OrderInfo o3)
-                        {
-                            result.Add(o3);
-                        }
-                        else if (item is DataGridRowInfo rowInfo && rowInfo.RowData is OrderInfo o4)
-                        {
-                            result.Add(o4);
-                        }
-                    }
+                    result.Add(o1);
+                }
+                else if (item is DataGridRowInfo rowInfo && rowInfo.RowData is OrderInfo o2)
+                {
+                    result.Add(o2);
                 }
             }
 
@@ -222,10 +253,9 @@ dataGrid.CellRightTapped += (s, e) =>
         }
 
         /// <summary>
-        /// Gets the selected OrderInfo objects from the currently selected cells.
+        /// Gets the selected OrderInfo objects from the currently selected cells
+        /// whose column matches the supplied mapping name.
         /// </summary>
-        /// <param name="mappingName"></param>
-        /// <returns></returns>
         private IList<OrderInfo> GetSelectedOrderInfosFromSelectedCells(string mappingName)
         {
             var result = new List<OrderInfo>();
@@ -239,12 +269,9 @@ dataGrid.CellRightTapped += (s, e) =>
             {
                 var column = info.Column;
                 var rowData = info.RowData;
-                if (rowData is OrderInfo order && column?.MappingName == mappingName)
+                if (rowData is OrderInfo order && column?.MappingName == mappingName && !result.Contains(order))
                 {
-                    if (!result.Contains(order))
-                    {
-                        result.Add(order);
-                    }
+                    result.Add(order);
                 }
             }
 
@@ -254,8 +281,6 @@ dataGrid.CellRightTapped += (s, e) =>
         /// <summary>
         /// ViewModel property changed handler to respond to changes in selection mode.
         /// </summary>
-        /// <param name="sender"></param>
-        /// <param name="e"></param>
         private void ViewModelOnPropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
             if (e.PropertyName == nameof(MainViewModel.IsCellSelectionMode))
@@ -274,25 +299,13 @@ dataGrid.CellRightTapped += (s, e) =>
         /// Updates the selection and navigation modes of the associated data grid to use either cell-based or row-based
         /// selection.
         /// </summary>
-        /// <param name="isCellMode">true to set the data grid to cell selection mode; false to set it to row selection mode.</param>
         private void UpdateGridSelectionUnit(bool isCellMode)
         {
             ClearGridSelection();
-            var suProp = dataGrid.GetType().GetProperty("SelectionUnit", BindingFlags.Public | BindingFlags.Instance);
-            if (suProp != null)
-            {
-                var enumType = suProp.PropertyType;
-                var enumValue = Enum.Parse(enumType, isCellMode ? "Cell" : "Row");
-                suProp.SetValue(dataGrid, enumValue);
-            }
-
-            var selModeProp = dataGrid.GetType().GetProperty("SelectionMode", BindingFlags.Public | BindingFlags.Instance);
-            if (selModeProp != null)
-            {
-                var enumType = selModeProp.PropertyType;
-                var enumValue = Enum.Parse(enumType, "Multiple");
-                selModeProp.SetValue(dataGrid, enumValue);
-            }
+            // SelectionMode stays Multiple and is bound from the VM so it has
+            // a single source of truth. The picker only toggles the *unit*
+            // (Cell vs Row), not the *count*.
+            dataGrid.SelectionUnit = isCellMode ? DataGridSelectionUnit.Cell : DataGridSelectionUnit.Row;
         }
 
         /// <summary>
@@ -300,26 +313,14 @@ dataGrid.CellRightTapped += (s, e) =>
         /// </summary>
         private void ClearGridSelection()
         {
-            var clearSel = dataGrid.GetType().GetMethod("ClearSelection", BindingFlags.Public | BindingFlags.Instance);
-            clearSel?.Invoke(dataGrid, null);
-
+            dataGrid.ClearSelection();
             dataGrid.SelectedRows?.Clear();
-            var getSelectedCells = dataGrid.GetType().GetMethod("GetSelectedCells", BindingFlags.Public | BindingFlags.Instance);
-            var cellsObj = getSelectedCells?.Invoke(dataGrid, null) as System.Collections.IList;
-            cellsObj?.Clear();
+            dataGrid.CurrentCell = default;
 
-            var selectedCellsProp = dataGrid.GetType().GetProperty("SelectedCells", BindingFlags.Public | BindingFlags.Instance);
-            var selectedCells = selectedCellsProp?.GetValue(dataGrid) as System.Collections.IList;
+            var selectedCells = dataGrid.GetSelectedCells();
             selectedCells?.Clear();
 
-            var currentCellProp = dataGrid.GetType().GetProperty("CurrentCell", BindingFlags.Public | BindingFlags.Instance);
-            if (currentCellProp != null)
-            {
-                currentCellProp.SetValue(dataGrid, null);
-            }
-
-            var refresh = dataGrid.GetType().GetMethod("Refresh", BindingFlags.Public | BindingFlags.Instance);
-            refresh?.Invoke(dataGrid, null);
+            dataGrid.Refresh();
         }
     }
 }
