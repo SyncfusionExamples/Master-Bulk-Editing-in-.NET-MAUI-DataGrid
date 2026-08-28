@@ -103,7 +103,16 @@ namespace DataGridBulkEditSample
         /// Raises the <see cref="PropertyChanged"/> event for the specified property.
         /// </summary>
         /// <param name="propertyName">The name of the property that changed.</param>
-        protected void OnPropertyChanged(string propertyName) =>
+        public void OnPropertyChanged(string propertyName) =>
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+
+        /// <summary>
+        /// Forces a <see cref="PropertyChanged"/> notification for the supplied
+        /// property name. Useful when the property was set via reflection (e.g.
+        /// by reflection-based bulk-edit paths) and the setter was bypassed.
+        /// </summary>
+        /// <param name="propertyName">The mapping/property name to refresh.</param>
+        public void RaisePropertyChanged(string propertyName) =>
             PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 }
